@@ -10,37 +10,35 @@ class CaptchaSolver
   end
 
   def solution1
-    sum = 0
-
-    input.each_with_index do |number, place|
-      following = input[next_index_for(place)]
-      if number == following
-        sum = sum + number
-      end
+    solve_with do |index|
+      next_index_for index
     end
-
-    sum
   end
 
   def solution2
-    sum = 0
-
-    input.each_with_index do |number, place|
-      following = input[jump_index_for(place)]
-      if number == following
-        sum = sum + number
-      end
+    solve_with do |index|
+      jump_index_for index
     end
-
-    sum
   end
 
   private
 
+  def solve_with &index_func
+    sum = 0
+
+    input.each_with_index do |number, place|
+      following = input[index_func.call(place)]
+      if number == following
+        sum = sum + number
+      end
+    end
+
+    sum
+  end
+
   def next_index_for index
     next_index = index + 1
-    return next_index if next_index < input.length
-    0
+    next_index % input.length
   end
 
   def jump_index_for index
