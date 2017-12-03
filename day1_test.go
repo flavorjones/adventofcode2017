@@ -12,6 +12,18 @@ type CaptchaInput struct {
 	input string
 }
 
+type getIndex func(len int, index int) int
+
+func nextIndexOfRing(len int, index int) int {
+	next_index := index + 1
+	return next_index % len
+}
+
+func oppositeIndexOfRing(len int, index int) int {
+	next_index := index + (len / 2)
+	return next_index % len
+}
+
 func makeIntSliceFromString(input string) []int {
 	slice := make([]int, len(input))
 	for j := 0; j < len(input); j++ {
@@ -24,38 +36,24 @@ func makeIntSliceFromString(input string) []int {
 	return slice
 }
 
-func nextIndex(len int, index int) int {
-	next_index := index + 1
-	return next_index % len
-}
-
-func jumpIndex(len int, index int) int {
-	next_index := index + (len / 2)
-	return next_index % len
+func (c CaptchaInput) solveWith(fn getIndex) int {
+	slice := makeIntSliceFromString(c.input)
+	sum := 0
+	for j := 0; j < len(slice); j++ {
+		next_index := fn(len(slice), j)
+		if slice[j] == slice[next_index] {
+			sum += slice[next_index]
+		}
+	}
+	return sum
 }
 
 func (c CaptchaInput) solution1() int {
-	slice := makeIntSliceFromString(c.input)
-	sum := 0
-	for j := 0; j < len(slice); j++ {
-		next_index := nextIndex(len(slice), j)
-		if slice[j] == slice[next_index] {
-			sum += slice[next_index]
-		}
-	}
-	return sum
+	return c.solveWith(nextIndexOfRing)
 }
 
 func (c CaptchaInput) solution2() int {
-	slice := makeIntSliceFromString(c.input)
-	sum := 0
-	for j := 0; j < len(slice); j++ {
-		next_index := jumpIndex(len(slice), j)
-		if slice[j] == slice[next_index] {
-			sum += slice[next_index]
-		}
-	}
-	return sum
+	return c.solveWith(oppositeIndexOfRing)
 }
 
 var _ = Describe("Day1", func() {
