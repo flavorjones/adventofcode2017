@@ -14,8 +14,8 @@ type CartesianCoordinates struct {
 }
 
 // manhattanDistance returns the manhattan distance of the coordinates
-func manhattanDistance(coordinates CartesianCoordinates) int {
-	return int(math.Abs(float64(coordinates.x)) + math.Abs(float64(coordinates.y)))
+func (c CartesianCoordinates) manhattanDistance() int {
+	return int(math.Abs(float64(c.x)) + math.Abs(float64(c.y)))
 }
 
 // findNearestOddSquare(number int):
@@ -28,6 +28,30 @@ func findNearestOddSquare(number int) int {
 			return j
 		}
 	}
+}
+
+func (c CartesianCoordinates) move(relative CartesianCoordinates) CartesianCoordinates {
+	return CartesianCoordinates{c.x + relative.x, c.y + relative.y}
+}
+
+// CartesianCoordinates.location returns the location of the coordinates
+func (c CartesianCoordinates) location() int {
+	if (c == CartesianCoordinates{0, 0}) {
+		return 1
+	}
+
+	min_root := (2 * int(math.Max(math.Abs(float64(c.x)), math.Abs(float64(c.y))))) - 1
+	min_square := int(math.Pow(float64(min_root), 2.0))
+	max_square := int(math.Pow(float64(min_root+2), 2.0))
+
+	// brute force it because I'm lazy
+	for j := min_square + 1; j <= max_square; j++ {
+		if locationToCoordinates(j) == c {
+			return j
+		}
+	}
+
+	return -1
 }
 
 // locationToCoordinates returns the cartesian coordinates of `location`
@@ -65,12 +89,58 @@ func locationToCoordinates(location int) CartesianCoordinates {
 
 // distanceToLocation returns manhattan distance to memory location `location`
 func distanceToLocation(location int) int {
-	position := locationToCoordinates(location)
-	return manhattanDistance(position)
+	return locationToCoordinates(location).manhattanDistance()
 }
 
 var _ = Describe("Day3", func() {
 	Describe("SpiralMemory", func() {
+		Describe("CartesianCoordinates", func() {
+			Describe("move", func() {
+				It("moves the relative amount", func() {
+					here := CartesianCoordinates{11, 22}
+					relative := CartesianCoordinates{-1, 5}
+					Expect(here.move(relative)).To(Equal(CartesianCoordinates{10, 27}))
+				})
+			})
+
+			Describe("manhattanDistance", func() {
+				It("returns the manhattan distance of the coords", func() {
+					Expect(CartesianCoordinates{11, -5}.manhattanDistance()).To(Equal(16))
+				})
+			})
+
+			Describe("location", func() {
+				It("returns the location at the coordinates", func() {
+					Expect(coordinatesToLocation(CartesianCoordinates{0, 0})).To(Equal(1))
+					Expect(coordinatesToLocation(CartesianCoordinates{1, 0})).To(Equal(2))
+					Expect(coordinatesToLocation(CartesianCoordinates{1, 1})).To(Equal(3))
+					Expect(coordinatesToLocation(CartesianCoordinates{0, 1})).To(Equal(4))
+					Expect(coordinatesToLocation(CartesianCoordinates{-1, 1})).To(Equal(5))
+					Expect(coordinatesToLocation(CartesianCoordinates{-1, 0})).To(Equal(6))
+					Expect(coordinatesToLocation(CartesianCoordinates{-1, -1})).To(Equal(7))
+					Expect(coordinatesToLocation(CartesianCoordinates{0, -1})).To(Equal(8))
+					Expect(coordinatesToLocation(CartesianCoordinates{1, -1})).To(Equal(9))
+					Expect(coordinatesToLocation(CartesianCoordinates{2, -1})).To(Equal(10))
+					Expect(coordinatesToLocation(CartesianCoordinates{2, 0})).To(Equal(11))
+					Expect(coordinatesToLocation(CartesianCoordinates{2, 1})).To(Equal(12))
+					Expect(coordinatesToLocation(CartesianCoordinates{2, 2})).To(Equal(13))
+					Expect(coordinatesToLocation(CartesianCoordinates{1, 2})).To(Equal(14))
+					Expect(coordinatesToLocation(CartesianCoordinates{0, 2})).To(Equal(15))
+					Expect(coordinatesToLocation(CartesianCoordinates{-1, 2})).To(Equal(16))
+					Expect(coordinatesToLocation(CartesianCoordinates{-2, 2})).To(Equal(17))
+					Expect(coordinatesToLocation(CartesianCoordinates{-2, 1})).To(Equal(18))
+					Expect(coordinatesToLocation(CartesianCoordinates{-2, 0})).To(Equal(19))
+					Expect(coordinatesToLocation(CartesianCoordinates{-2, -1})).To(Equal(20))
+					Expect(coordinatesToLocation(CartesianCoordinates{-2, -2})).To(Equal(21))
+					Expect(coordinatesToLocation(CartesianCoordinates{-1, -2})).To(Equal(22))
+					Expect(coordinatesToLocation(CartesianCoordinates{0, -2})).To(Equal(23))
+					Expect(coordinatesToLocation(CartesianCoordinates{1, -2})).To(Equal(24))
+					Expect(coordinatesToLocation(CartesianCoordinates{2, -2})).To(Equal(25))
+					Expect(coordinatesToLocation(CartesianCoordinates{3, -2})).To(Equal(26))
+				})
+			})
+		})
+
 		Describe("locationToCoordinates", func() {
 			It("returns the coordinates of a location", func() {
 				Expect(locationToCoordinates(1)).To(Equal(CartesianCoordinates{0, 0}))
