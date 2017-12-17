@@ -8,6 +8,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type SpiralMemoryLocation int
+
 type CartesianCoordinates struct {
 	x int
 	y int
@@ -16,6 +18,68 @@ type CartesianCoordinates struct {
 // manhattanDistance returns the manhattan distance of the coordinates
 func (c CartesianCoordinates) manhattanDistance() int {
 	return int(math.Abs(float64(c.x)) + math.Abs(float64(c.y)))
+}
+
+func (c CartesianCoordinates) move(relative CartesianCoordinates) CartesianCoordinates {
+	return CartesianCoordinates{c.x + relative.x, c.y + relative.y}
+}
+
+// CartesianCoordinates.location returns the location of the coordinates
+func (c CartesianCoordinates) location() SpiralMemoryLocation {
+	if (c == CartesianCoordinates{0, 0}) {
+		return 1
+	}
+
+	min_root := (2 * int(math.Max(math.Abs(float64(c.x)), math.Abs(float64(c.y))))) - 1
+	min_square := SpiralMemoryLocation(math.Pow(float64(min_root), 2.0))
+	max_square := SpiralMemoryLocation(math.Pow(float64(min_root+2), 2.0))
+
+	// brute force it because I'm lazy
+	for j := SpiralMemoryLocation(min_square + 1); j <= max_square; j++ {
+		if locationToCoordinates(j) == c {
+			return j
+		}
+	}
+
+	return -1
+}
+
+// locationToCoordinates returns the cartesian coordinates of `location`
+func locationToCoordinates(location SpiralMemoryLocation) CartesianCoordinates {
+	coords := CartesianCoordinates{}
+
+	// special case
+	if location == 1 {
+		return coords
+	}
+
+	root := findNearestOddSquare(int(location))
+	square := root * root
+	offset := (int(location) - 1) % (root - 1) // offset from corner
+
+	if int(location) == square {
+		coords.x = (root - 1) / 2
+		coords.y = -(root - 1) / 2
+	} else if square-(root-1) <= int(location) {
+		coords.x = offset - (root-1)/2
+		coords.y = -(root - 1) / 2
+	} else if square-(2*(root-1)) <= int(location) {
+		coords.x = -(root - 1) / 2
+		coords.y = (root-1)/2 - offset
+	} else if square-(3*(root-1)) <= int(location) {
+		coords.x = (root-1)/2 - offset
+		coords.y = (root - 1) / 2
+	} else if square-(4*(root-1)) <= int(location) {
+		coords.x = (root - 1) / 2
+		coords.y = offset - (root-1)/2
+	}
+
+	return coords
+}
+
+// distanceToLocation returns manhattan distance to memory location `location`
+func distanceToLocation(location SpiralMemoryLocation) int {
+	return locationToCoordinates(location).manhattanDistance()
 }
 
 // findNearestOddSquare(number int):
@@ -28,68 +92,6 @@ func findNearestOddSquare(number int) int {
 			return j
 		}
 	}
-}
-
-func (c CartesianCoordinates) move(relative CartesianCoordinates) CartesianCoordinates {
-	return CartesianCoordinates{c.x + relative.x, c.y + relative.y}
-}
-
-// CartesianCoordinates.location returns the location of the coordinates
-func (c CartesianCoordinates) location() int {
-	if (c == CartesianCoordinates{0, 0}) {
-		return 1
-	}
-
-	min_root := (2 * int(math.Max(math.Abs(float64(c.x)), math.Abs(float64(c.y))))) - 1
-	min_square := int(math.Pow(float64(min_root), 2.0))
-	max_square := int(math.Pow(float64(min_root+2), 2.0))
-
-	// brute force it because I'm lazy
-	for j := min_square + 1; j <= max_square; j++ {
-		if locationToCoordinates(j) == c {
-			return j
-		}
-	}
-
-	return -1
-}
-
-// locationToCoordinates returns the cartesian coordinates of `location`
-func locationToCoordinates(location int) CartesianCoordinates {
-	coords := CartesianCoordinates{}
-
-	// special case
-	if location == 1 {
-		return coords
-	}
-
-	root := findNearestOddSquare(location)
-	square := root * root
-	offset := (location - 1) % (root - 1) // offset from corner
-
-	if location == square {
-		coords.x = (root - 1) / 2
-		coords.y = -(root - 1) / 2
-	} else if square-(root-1) <= location {
-		coords.x = offset - (root-1)/2
-		coords.y = -(root - 1) / 2
-	} else if square-(2*(root-1)) <= location {
-		coords.x = -(root - 1) / 2
-		coords.y = (root-1)/2 - offset
-	} else if square-(3*(root-1)) <= location {
-		coords.x = (root-1)/2 - offset
-		coords.y = (root - 1) / 2
-	} else if square-(4*(root-1)) <= location {
-		coords.x = (root - 1) / 2
-		coords.y = offset - (root-1)/2
-	}
-
-	return coords
-}
-
-// distanceToLocation returns manhattan distance to memory location `location`
-func distanceToLocation(location int) int {
-	return locationToCoordinates(location).manhattanDistance()
 }
 
 var _ = Describe("Day3", func() {
@@ -111,32 +113,32 @@ var _ = Describe("Day3", func() {
 
 			Describe("location", func() {
 				It("returns the location at the coordinates", func() {
-					Expect(coordinatesToLocation(CartesianCoordinates{0, 0})).To(Equal(1))
-					Expect(coordinatesToLocation(CartesianCoordinates{1, 0})).To(Equal(2))
-					Expect(coordinatesToLocation(CartesianCoordinates{1, 1})).To(Equal(3))
-					Expect(coordinatesToLocation(CartesianCoordinates{0, 1})).To(Equal(4))
-					Expect(coordinatesToLocation(CartesianCoordinates{-1, 1})).To(Equal(5))
-					Expect(coordinatesToLocation(CartesianCoordinates{-1, 0})).To(Equal(6))
-					Expect(coordinatesToLocation(CartesianCoordinates{-1, -1})).To(Equal(7))
-					Expect(coordinatesToLocation(CartesianCoordinates{0, -1})).To(Equal(8))
-					Expect(coordinatesToLocation(CartesianCoordinates{1, -1})).To(Equal(9))
-					Expect(coordinatesToLocation(CartesianCoordinates{2, -1})).To(Equal(10))
-					Expect(coordinatesToLocation(CartesianCoordinates{2, 0})).To(Equal(11))
-					Expect(coordinatesToLocation(CartesianCoordinates{2, 1})).To(Equal(12))
-					Expect(coordinatesToLocation(CartesianCoordinates{2, 2})).To(Equal(13))
-					Expect(coordinatesToLocation(CartesianCoordinates{1, 2})).To(Equal(14))
-					Expect(coordinatesToLocation(CartesianCoordinates{0, 2})).To(Equal(15))
-					Expect(coordinatesToLocation(CartesianCoordinates{-1, 2})).To(Equal(16))
-					Expect(coordinatesToLocation(CartesianCoordinates{-2, 2})).To(Equal(17))
-					Expect(coordinatesToLocation(CartesianCoordinates{-2, 1})).To(Equal(18))
-					Expect(coordinatesToLocation(CartesianCoordinates{-2, 0})).To(Equal(19))
-					Expect(coordinatesToLocation(CartesianCoordinates{-2, -1})).To(Equal(20))
-					Expect(coordinatesToLocation(CartesianCoordinates{-2, -2})).To(Equal(21))
-					Expect(coordinatesToLocation(CartesianCoordinates{-1, -2})).To(Equal(22))
-					Expect(coordinatesToLocation(CartesianCoordinates{0, -2})).To(Equal(23))
-					Expect(coordinatesToLocation(CartesianCoordinates{1, -2})).To(Equal(24))
-					Expect(coordinatesToLocation(CartesianCoordinates{2, -2})).To(Equal(25))
-					Expect(coordinatesToLocation(CartesianCoordinates{3, -2})).To(Equal(26))
+					Expect(CartesianCoordinates{0, 0}.location()).To(Equal(SpiralMemoryLocation(1)))
+					Expect(CartesianCoordinates{1, 0}.location()).To(Equal(SpiralMemoryLocation(2)))
+					Expect(CartesianCoordinates{1, 1}.location()).To(Equal(SpiralMemoryLocation(3)))
+					Expect(CartesianCoordinates{0, 1}.location()).To(Equal(SpiralMemoryLocation(4)))
+					Expect(CartesianCoordinates{-1, 1}.location()).To(Equal(SpiralMemoryLocation(5)))
+					Expect(CartesianCoordinates{-1, 0}.location()).To(Equal(SpiralMemoryLocation(6)))
+					Expect(CartesianCoordinates{-1, -1}.location()).To(Equal(SpiralMemoryLocation(7)))
+					Expect(CartesianCoordinates{0, -1}.location()).To(Equal(SpiralMemoryLocation(8)))
+					Expect(CartesianCoordinates{1, -1}.location()).To(Equal(SpiralMemoryLocation(9)))
+					Expect(CartesianCoordinates{2, -1}.location()).To(Equal(SpiralMemoryLocation(10)))
+					Expect(CartesianCoordinates{2, 0}.location()).To(Equal(SpiralMemoryLocation(11)))
+					Expect(CartesianCoordinates{2, 1}.location()).To(Equal(SpiralMemoryLocation(12)))
+					Expect(CartesianCoordinates{2, 2}.location()).To(Equal(SpiralMemoryLocation(13)))
+					Expect(CartesianCoordinates{1, 2}.location()).To(Equal(SpiralMemoryLocation(14)))
+					Expect(CartesianCoordinates{0, 2}.location()).To(Equal(SpiralMemoryLocation(15)))
+					Expect(CartesianCoordinates{-1, 2}.location()).To(Equal(SpiralMemoryLocation(16)))
+					Expect(CartesianCoordinates{-2, 2}.location()).To(Equal(SpiralMemoryLocation(17)))
+					Expect(CartesianCoordinates{-2, 1}.location()).To(Equal(SpiralMemoryLocation(18)))
+					Expect(CartesianCoordinates{-2, 0}.location()).To(Equal(SpiralMemoryLocation(19)))
+					Expect(CartesianCoordinates{-2, -1}.location()).To(Equal(SpiralMemoryLocation(20)))
+					Expect(CartesianCoordinates{-2, -2}.location()).To(Equal(SpiralMemoryLocation(21)))
+					Expect(CartesianCoordinates{-1, -2}.location()).To(Equal(SpiralMemoryLocation(22)))
+					Expect(CartesianCoordinates{0, -2}.location()).To(Equal(SpiralMemoryLocation(23)))
+					Expect(CartesianCoordinates{1, -2}.location()).To(Equal(SpiralMemoryLocation(24)))
+					Expect(CartesianCoordinates{2, -2}.location()).To(Equal(SpiralMemoryLocation(25)))
+					Expect(CartesianCoordinates{3, -2}.location()).To(Equal(SpiralMemoryLocation(26)))
 				})
 			})
 		})
