@@ -15,7 +15,7 @@ type CartesianCoordinates struct {
 	y int
 }
 
-// manhattanDistance returns the manhattan distance of the coordinates
+// returns the manhattan distance of the coordinates
 func (c CartesianCoordinates) manhattanDistance() int {
 	return int(math.Abs(float64(c.x)) + math.Abs(float64(c.y)))
 }
@@ -24,7 +24,7 @@ func (c CartesianCoordinates) move(relative CartesianCoordinates) CartesianCoord
 	return CartesianCoordinates{c.x + relative.x, c.y + relative.y}
 }
 
-// CartesianCoordinates.location returns the location of the coordinates
+// returns the location of the coordinates
 func (c CartesianCoordinates) location() SpiralMemoryLocation {
 	if (c == CartesianCoordinates{0, 0}) {
 		return 1
@@ -36,7 +36,7 @@ func (c CartesianCoordinates) location() SpiralMemoryLocation {
 
 	// brute force it because I'm lazy
 	for j := SpiralMemoryLocation(min_square + 1); j <= max_square; j++ {
-		if locationToCoordinates(j) == c {
+		if j.coordinates() == c {
 			return j
 		}
 	}
@@ -44,8 +44,8 @@ func (c CartesianCoordinates) location() SpiralMemoryLocation {
 	return -1
 }
 
-// locationToCoordinates returns the cartesian coordinates of `location`
-func locationToCoordinates(location SpiralMemoryLocation) CartesianCoordinates {
+// returns the cartesian coordinates of `location`
+func (location SpiralMemoryLocation) coordinates() CartesianCoordinates {
 	coords := CartesianCoordinates{}
 
 	// special case
@@ -77,9 +77,9 @@ func locationToCoordinates(location SpiralMemoryLocation) CartesianCoordinates {
 	return coords
 }
 
-// distanceToLocation returns manhattan distance to memory location `location`
-func distanceToLocation(location SpiralMemoryLocation) int {
-	return locationToCoordinates(location).manhattanDistance()
+// returns manhattan distance to memory location `location`
+func (location SpiralMemoryLocation) distance() int {
+	return location.coordinates().manhattanDistance()
 }
 
 // findNearestOddSquare(number int):
@@ -143,69 +143,71 @@ var _ = Describe("Day3", func() {
 			})
 		})
 
-		Describe("locationToCoordinates", func() {
-			It("returns the coordinates of a location", func() {
-				Expect(locationToCoordinates(1)).To(Equal(CartesianCoordinates{0, 0}))
-				Expect(locationToCoordinates(2)).To(Equal(CartesianCoordinates{1, 0}))
-				Expect(locationToCoordinates(3)).To(Equal(CartesianCoordinates{1, 1}))
-				Expect(locationToCoordinates(4)).To(Equal(CartesianCoordinates{0, 1}))
-				Expect(locationToCoordinates(5)).To(Equal(CartesianCoordinates{-1, 1}))
-				Expect(locationToCoordinates(6)).To(Equal(CartesianCoordinates{-1, 0}))
-				Expect(locationToCoordinates(7)).To(Equal(CartesianCoordinates{-1, -1}))
-				Expect(locationToCoordinates(8)).To(Equal(CartesianCoordinates{0, -1}))
-				Expect(locationToCoordinates(9)).To(Equal(CartesianCoordinates{1, -1}))
-				Expect(locationToCoordinates(10)).To(Equal(CartesianCoordinates{2, -1}))
-				Expect(locationToCoordinates(11)).To(Equal(CartesianCoordinates{2, 0}))
-				Expect(locationToCoordinates(12)).To(Equal(CartesianCoordinates{2, 1}))
-				Expect(locationToCoordinates(13)).To(Equal(CartesianCoordinates{2, 2}))
-				Expect(locationToCoordinates(14)).To(Equal(CartesianCoordinates{1, 2}))
-				Expect(locationToCoordinates(15)).To(Equal(CartesianCoordinates{0, 2}))
-				Expect(locationToCoordinates(16)).To(Equal(CartesianCoordinates{-1, 2}))
-				Expect(locationToCoordinates(17)).To(Equal(CartesianCoordinates{-2, 2}))
-				Expect(locationToCoordinates(18)).To(Equal(CartesianCoordinates{-2, 1}))
-				Expect(locationToCoordinates(19)).To(Equal(CartesianCoordinates{-2, 0}))
-				Expect(locationToCoordinates(20)).To(Equal(CartesianCoordinates{-2, -1}))
-				Expect(locationToCoordinates(21)).To(Equal(CartesianCoordinates{-2, -2}))
-				Expect(locationToCoordinates(22)).To(Equal(CartesianCoordinates{-1, -2}))
-				Expect(locationToCoordinates(23)).To(Equal(CartesianCoordinates{0, -2}))
-				Expect(locationToCoordinates(24)).To(Equal(CartesianCoordinates{1, -2}))
-				Expect(locationToCoordinates(25)).To(Equal(CartesianCoordinates{2, -2}))
-				Expect(locationToCoordinates(26)).To(Equal(CartesianCoordinates{3, -2}))
+		Describe("SpiralMemoryLocation", func() {
+			Describe("coordinates", func() {
+				It("returns the coordinates of a location", func() {
+					Expect(SpiralMemoryLocation(1).coordinates()).To(Equal(CartesianCoordinates{0, 0}))
+					Expect(SpiralMemoryLocation(2).coordinates()).To(Equal(CartesianCoordinates{1, 0}))
+					Expect(SpiralMemoryLocation(3).coordinates()).To(Equal(CartesianCoordinates{1, 1}))
+					Expect(SpiralMemoryLocation(4).coordinates()).To(Equal(CartesianCoordinates{0, 1}))
+					Expect(SpiralMemoryLocation(5).coordinates()).To(Equal(CartesianCoordinates{-1, 1}))
+					Expect(SpiralMemoryLocation(6).coordinates()).To(Equal(CartesianCoordinates{-1, 0}))
+					Expect(SpiralMemoryLocation(7).coordinates()).To(Equal(CartesianCoordinates{-1, -1}))
+					Expect(SpiralMemoryLocation(8).coordinates()).To(Equal(CartesianCoordinates{0, -1}))
+					Expect(SpiralMemoryLocation(9).coordinates()).To(Equal(CartesianCoordinates{1, -1}))
+					Expect(SpiralMemoryLocation(10).coordinates()).To(Equal(CartesianCoordinates{2, -1}))
+					Expect(SpiralMemoryLocation(11).coordinates()).To(Equal(CartesianCoordinates{2, 0}))
+					Expect(SpiralMemoryLocation(12).coordinates()).To(Equal(CartesianCoordinates{2, 1}))
+					Expect(SpiralMemoryLocation(13).coordinates()).To(Equal(CartesianCoordinates{2, 2}))
+					Expect(SpiralMemoryLocation(14).coordinates()).To(Equal(CartesianCoordinates{1, 2}))
+					Expect(SpiralMemoryLocation(15).coordinates()).To(Equal(CartesianCoordinates{0, 2}))
+					Expect(SpiralMemoryLocation(16).coordinates()).To(Equal(CartesianCoordinates{-1, 2}))
+					Expect(SpiralMemoryLocation(17).coordinates()).To(Equal(CartesianCoordinates{-2, 2}))
+					Expect(SpiralMemoryLocation(18).coordinates()).To(Equal(CartesianCoordinates{-2, 1}))
+					Expect(SpiralMemoryLocation(19).coordinates()).To(Equal(CartesianCoordinates{-2, 0}))
+					Expect(SpiralMemoryLocation(20).coordinates()).To(Equal(CartesianCoordinates{-2, -1}))
+					Expect(SpiralMemoryLocation(21).coordinates()).To(Equal(CartesianCoordinates{-2, -2}))
+					Expect(SpiralMemoryLocation(22).coordinates()).To(Equal(CartesianCoordinates{-1, -2}))
+					Expect(SpiralMemoryLocation(23).coordinates()).To(Equal(CartesianCoordinates{0, -2}))
+					Expect(SpiralMemoryLocation(24).coordinates()).To(Equal(CartesianCoordinates{1, -2}))
+					Expect(SpiralMemoryLocation(25).coordinates()).To(Equal(CartesianCoordinates{2, -2}))
+					Expect(SpiralMemoryLocation(26).coordinates()).To(Equal(CartesianCoordinates{3, -2}))
+				})
 			})
 		})
 
 		Describe("distanceToLocation", func() {
 			It("returns the manhattan distance to the memory location", func() {
-				Expect(distanceToLocation(1)).To(Equal(0))
-				Expect(distanceToLocation(2)).To(Equal(1))
-				Expect(distanceToLocation(3)).To(Equal(2))
-				Expect(distanceToLocation(4)).To(Equal(1))
-				Expect(distanceToLocation(5)).To(Equal(2))
-				Expect(distanceToLocation(6)).To(Equal(1))
-				Expect(distanceToLocation(7)).To(Equal(2))
-				Expect(distanceToLocation(8)).To(Equal(1))
-				Expect(distanceToLocation(9)).To(Equal(2))
+				Expect(SpiralMemoryLocation(1).distance()).To(Equal(0))
+				Expect(SpiralMemoryLocation(2).distance()).To(Equal(1))
+				Expect(SpiralMemoryLocation(3).distance()).To(Equal(2))
+				Expect(SpiralMemoryLocation(4).distance()).To(Equal(1))
+				Expect(SpiralMemoryLocation(5).distance()).To(Equal(2))
+				Expect(SpiralMemoryLocation(6).distance()).To(Equal(1))
+				Expect(SpiralMemoryLocation(7).distance()).To(Equal(2))
+				Expect(SpiralMemoryLocation(8).distance()).To(Equal(1))
+				Expect(SpiralMemoryLocation(9).distance()).To(Equal(2))
 
-				Expect(distanceToLocation(10)).To(Equal(3))
-				Expect(distanceToLocation(11)).To(Equal(2))
-				Expect(distanceToLocation(12)).To(Equal(3))
-				Expect(distanceToLocation(13)).To(Equal(4))
-				Expect(distanceToLocation(14)).To(Equal(3))
-				Expect(distanceToLocation(15)).To(Equal(2))
-				Expect(distanceToLocation(16)).To(Equal(3))
-				Expect(distanceToLocation(17)).To(Equal(4))
-				Expect(distanceToLocation(18)).To(Equal(3))
-				Expect(distanceToLocation(19)).To(Equal(2))
-				Expect(distanceToLocation(20)).To(Equal(3))
-				Expect(distanceToLocation(21)).To(Equal(4))
-				Expect(distanceToLocation(22)).To(Equal(3))
-				Expect(distanceToLocation(23)).To(Equal(2))
-				Expect(distanceToLocation(24)).To(Equal(3))
-				Expect(distanceToLocation(25)).To(Equal(4))
+				Expect(SpiralMemoryLocation(10).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(11).distance()).To(Equal(2))
+				Expect(SpiralMemoryLocation(12).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(13).distance()).To(Equal(4))
+				Expect(SpiralMemoryLocation(14).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(15).distance()).To(Equal(2))
+				Expect(SpiralMemoryLocation(16).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(17).distance()).To(Equal(4))
+				Expect(SpiralMemoryLocation(18).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(19).distance()).To(Equal(2))
+				Expect(SpiralMemoryLocation(20).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(21).distance()).To(Equal(4))
+				Expect(SpiralMemoryLocation(22).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(23).distance()).To(Equal(2))
+				Expect(SpiralMemoryLocation(24).distance()).To(Equal(3))
+				Expect(SpiralMemoryLocation(25).distance()).To(Equal(4))
 
-				Expect(distanceToLocation(26)).To(Equal(5))
+				Expect(SpiralMemoryLocation(26).distance()).To(Equal(5))
 
-				Expect(distanceToLocation(1024)).To(Equal(31))
+				Expect(SpiralMemoryLocation(1024).distance()).To(Equal(31))
 			})
 		})
 
@@ -223,7 +225,7 @@ var _ = Describe("Day3", func() {
 
 		Describe("puzzle", func() {
 			It("star 1", func() {
-				fmt.Printf("d3 s1: %d\n", distanceToLocation(265149))
+				fmt.Printf("d3 s1: %d\n", SpiralMemoryLocation(265149).distance())
 			})
 		})
 	})
