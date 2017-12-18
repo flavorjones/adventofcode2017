@@ -9,6 +9,7 @@ import (
 )
 
 type SpiralMemoryLocation int
+type SpiralMemoryLocationCache map[SpiralMemoryLocation]int
 
 type CartesianCoordinates struct {
 	x int
@@ -34,8 +35,8 @@ func (c CartesianCoordinates) location() SpiralMemoryLocation {
 	min_square := SpiralMemoryLocation(math.Pow(float64(min_root), 2.0))
 	max_square := SpiralMemoryLocation(math.Pow(float64(min_root+2), 2.0))
 
-	// brute force it because I'm lazy
-	for j := SpiralMemoryLocation(min_square + 1); j <= max_square; j++ {
+	// use brute force, because I'm lazy
+	for j := min_square + 1; j <= max_square; j++ {
 		if j.coordinates() == c {
 			return j
 		}
@@ -92,6 +93,47 @@ func findNearestOddSquare(number int) int {
 			return j
 		}
 	}
+}
+
+var ADJACENT_CELLS = []CartesianCoordinates{
+	CartesianCoordinates{-1, 1},
+	CartesianCoordinates{-1, 0},
+	CartesianCoordinates{-1, -1},
+	CartesianCoordinates{0, -1},
+	CartesianCoordinates{0, 1},
+	CartesianCoordinates{1, -1},
+	CartesianCoordinates{1, 0},
+	CartesianCoordinates{1, 1},
+}
+
+// stressTest returns the sum of adjacent locations' values
+func stressTest(location SpiralMemoryLocation) int {
+	cache := make(SpiralMemoryLocationCache)
+	return stressTestWithCache(location, cache)
+}
+
+func stressTestWithCache(location SpiralMemoryLocation, cache SpiralMemoryLocationCache) int {
+	// special case
+	if location == 1 {
+		return 1
+	}
+
+	value, ok := cache[location]
+	if ok {
+		return value
+	}
+
+	sum := 0
+	coords := location.coordinates()
+	for _, jc := range ADJACENT_CELLS {
+		new_location := coords.move(jc).location()
+		if new_location < location {
+			sum += stressTestWithCache(new_location, cache)
+		}
+	}
+
+	cache[location] = sum
+	return sum
 }
 
 var _ = Describe("Day3", func() {
@@ -223,9 +265,46 @@ var _ = Describe("Day3", func() {
 			})
 		})
 
+		Describe("stressTest", func() {
+			It("given a location, returns the sum of adjacent locations", func() {
+				Expect(stressTest(1)).To(Equal(1))
+				Expect(stressTest(2)).To(Equal(1))
+				Expect(stressTest(3)).To(Equal(2))
+				Expect(stressTest(4)).To(Equal(4))
+				Expect(stressTest(5)).To(Equal(5))
+				Expect(stressTest(6)).To(Equal(10))
+				Expect(stressTest(7)).To(Equal(11))
+				Expect(stressTest(8)).To(Equal(23))
+				Expect(stressTest(9)).To(Equal(25))
+				Expect(stressTest(10)).To(Equal(26))
+				Expect(stressTest(11)).To(Equal(54))
+				Expect(stressTest(12)).To(Equal(57))
+				Expect(stressTest(13)).To(Equal(59))
+				Expect(stressTest(14)).To(Equal(122))
+				Expect(stressTest(15)).To(Equal(133))
+				Expect(stressTest(16)).To(Equal(142))
+				Expect(stressTest(17)).To(Equal(147))
+				Expect(stressTest(18)).To(Equal(304))
+				Expect(stressTest(19)).To(Equal(330))
+				Expect(stressTest(20)).To(Equal(351))
+				Expect(stressTest(21)).To(Equal(362))
+				Expect(stressTest(22)).To(Equal(747))
+				Expect(stressTest(23)).To(Equal(806))
+			})
+		})
+
 		Describe("puzzle", func() {
 			It("star 1", func() {
 				fmt.Printf("d3 s1: %d\n", SpiralMemoryLocation(265149).distance())
+			})
+
+			It("star 2", func() {
+				value := 0
+				cache := make(SpiralMemoryLocationCache)
+				for j := 1; value <= 265149; j++ {
+					value = stressTestWithCache(SpiralMemoryLocation(j), cache)
+				}
+				fmt.Printf("d3 s2: %d\n", value)
 			})
 		})
 	})
