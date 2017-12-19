@@ -44,6 +44,26 @@ func (ctm *CpuTrampolineMaze) run() {
 	}
 }
 
+func (ctm *CpuTrampolineMaze) tick2() {
+	jump := ctm.instructions[ctm.addr]
+	ctm.steps += 1
+	if ctm.instructions[ctm.addr] >= 3 {
+		ctm.instructions[ctm.addr] -= 1
+	} else {
+		ctm.instructions[ctm.addr] += 1
+	}
+	ctm.addr += jump
+	if ctm.addr >= len(ctm.instructions) {
+		ctm.addr = -1
+	}
+}
+
+func (ctm *CpuTrampolineMaze) run2() {
+	for ctm.addr >= 0 {
+		ctm.tick2()
+	}
+}
+
 var _ = Describe("Day5", func() {
 	Describe("CpuTrampolineMaze", func() {
 		var ctm *CpuTrampolineMaze
@@ -52,44 +72,54 @@ var _ = Describe("Day5", func() {
 			ctm = NewCpuTrampolineMaze("0 3 0 1 -3")
 		})
 
-		It("can be stepped through and examined", func() {
-			Expect(ctm.instructions).To(Equal([]int{0, 3, 0, 1, -3}))
-			Expect(ctm.addr).To(Equal(0))
+		Describe("tick/run", func() {
+			It("can be stepped through and examined", func() {
+				Expect(ctm.instructions).To(Equal([]int{0, 3, 0, 1, -3}))
+				Expect(ctm.addr).To(Equal(0))
 
-			ctm.tick()
-			Expect(ctm.instructions).To(Equal([]int{1, 3, 0, 1, -3}))
-			Expect(ctm.addr).To(Equal(0))
-			Expect(ctm.steps).To(Equal(1))
+				ctm.tick()
+				Expect(ctm.instructions).To(Equal([]int{1, 3, 0, 1, -3}))
+				Expect(ctm.addr).To(Equal(0))
+				Expect(ctm.steps).To(Equal(1))
 
-			ctm.tick()
-			Expect(ctm.instructions).To(Equal([]int{2, 3, 0, 1, -3}))
-			Expect(ctm.addr).To(Equal(1))
-			Expect(ctm.steps).To(Equal(2))
+				ctm.tick()
+				Expect(ctm.instructions).To(Equal([]int{2, 3, 0, 1, -3}))
+				Expect(ctm.addr).To(Equal(1))
+				Expect(ctm.steps).To(Equal(2))
 
-			ctm.tick()
-			Expect(ctm.instructions).To(Equal([]int{2, 4, 0, 1, -3}))
-			Expect(ctm.addr).To(Equal(4))
-			Expect(ctm.steps).To(Equal(3))
+				ctm.tick()
+				Expect(ctm.instructions).To(Equal([]int{2, 4, 0, 1, -3}))
+				Expect(ctm.addr).To(Equal(4))
+				Expect(ctm.steps).To(Equal(3))
 
-			ctm.tick()
-			Expect(ctm.instructions).To(Equal([]int{2, 4, 0, 1, -2}))
-			Expect(ctm.addr).To(Equal(1))
-			Expect(ctm.steps).To(Equal(4))
+				ctm.tick()
+				Expect(ctm.instructions).To(Equal([]int{2, 4, 0, 1, -2}))
+				Expect(ctm.addr).To(Equal(1))
+				Expect(ctm.steps).To(Equal(4))
 
-			ctm.tick()
-			Expect(ctm.instructions).To(Equal([]int{2, 5, 0, 1, -2}))
-			Expect(ctm.addr).To(Equal(-1))
-			Expect(ctm.steps).To(Equal(5))
+				ctm.tick()
+				Expect(ctm.instructions).To(Equal([]int{2, 5, 0, 1, -2}))
+				Expect(ctm.addr).To(Equal(-1))
+				Expect(ctm.steps).To(Equal(5))
+			})
+
+			It("can be run to completion", func() {
+				Expect(ctm.instructions).To(Equal([]int{0, 3, 0, 1, -3}))
+				Expect(ctm.addr).To(Equal(0))
+
+				ctm.run()
+				Expect(ctm.instructions).To(Equal([]int{2, 5, 0, 1, -2}))
+				Expect(ctm.addr).To(Equal(-1))
+				Expect(ctm.steps).To(Equal(5))
+			})
 		})
 
-		It("can be run to completion", func() {
-			Expect(ctm.instructions).To(Equal([]int{0, 3, 0, 1, -3}))
-			Expect(ctm.addr).To(Equal(0))
-
-			ctm.run()
-			Expect(ctm.instructions).To(Equal([]int{2, 5, 0, 1, -2}))
-			Expect(ctm.addr).To(Equal(-1))
-			Expect(ctm.steps).To(Equal(5))
+		Describe("tick2/run2", func() {
+			It("decreases instruction by 1 if greater than 3", func() {
+				ctm.run2()
+				Expect(ctm.instructions).To(Equal([]int{2, 3, 2, 3, -1}))
+				Expect(ctm.steps).To(Equal(10))
+			})
 		})
 	})
 
@@ -101,6 +131,12 @@ var _ = Describe("Day5", func() {
 			ctm := NewCpuTrampolineMaze(instruction_list)
 			ctm.run()
 			fmt.Printf("d5 s1: exiting took %d steps\n", ctm.steps)
+		})
+
+		It("answers star 2", func() {
+			ctm := NewCpuTrampolineMaze(instruction_list)
+			ctm.run2()
+			fmt.Printf("d5 s2: exiting took %d steps\n", ctm.steps)
 		})
 	})
 })
