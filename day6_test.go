@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckarep/golang-set"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -39,18 +37,19 @@ func (mbs *MemoryBankSet) tick() {
 	}
 }
 
-func (mbs *MemoryBankSet) debug() int {
-	cache := mapset.NewSet()
+func (mbs *MemoryBankSet) debug() (int, int) {
+	cache := make(map[string]int) // []int → step in which it occurred
 	steps := 0
 
 	for {
 		mbs.tick()
 		steps += 1
 		key := makeKeyFrom(mbs.banks)
-		if cache.Contains(key) {
-			return steps
+		occurrence, found := cache[key]
+		if found {
+			return steps, steps - occurrence
 		}
-		cache.Add(key)
+		cache[key] = steps
 	}
 }
 
@@ -129,16 +128,24 @@ var _ = Describe("Day6", func() {
 
 			It("returns the number of steps taken", func() {
 				mbs := NewMemoryBankSet("0 2 7 0")
-				Expect(mbs.debug()).To(Equal(5))
+				steps, _ := mbs.debug()
+				Expect(steps).To(Equal(5))
+			})
+
+			It("returns the number of steps since the original occurrence (loop size)", func() {
+				mbs := NewMemoryBankSet("0 2 7 0")
+				_, loopSize := mbs.debug()
+				Expect(loopSize).To(Equal(4))
 			})
 		})
 	})
 
 	Describe("puzzle", func() {
-		It("solves star 1", func() {
+		It("solves star 1 and star 2", func() {
 			mbs := NewMemoryBankSet("5	1	10	0	1	7	13	14	3	12	8	10	7	12	0	6")
-			steps := mbs.debug()
+			steps, loopSize := mbs.debug()
 			fmt.Printf("d6 s1: took %d steps to find infinite loop\n", steps)
+			fmt.Printf("d6 s2: there are %d steps in the loop\n", loopSize)
 		})
 	})
 })
