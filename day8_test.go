@@ -237,5 +237,22 @@ var _ = Describe("Day8", func() {
 			}
 			fmt.Printf("d8 s1: largest value is %d\n", max)
 		})
+
+		It("answers star 2", func() {
+			rs := NewRegisterSet()
+			var max int
+			for _, instruction := range instructions {
+				if len(instruction) > 0 {
+					rs.execInstruction(instruction)
+
+					for _, value := range rs {
+						if value > max {
+							max = value
+						}
+					}
+				}
+			}
+			fmt.Printf("d8 s2: largest transient value is %d\n", max)
+		})
 	})
 })
