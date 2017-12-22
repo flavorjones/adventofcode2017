@@ -9,16 +9,18 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type KnotHashList []byte
+
 type KnotHash struct {
-	list     []int
+	list     KnotHashList
 	position int
 	skip     int
 }
 
 func NewKnotHash(size int) *KnotHash {
-	list := make([]int, size)
+	list := make(KnotHashList, size)
 	for j := 0; j < size; j++ {
-		list[j] = j
+		list[j] = byte(j)
 	}
 	return &KnotHash{list: list}
 }
@@ -31,7 +33,7 @@ func (kh *KnotHash) hash(lengthsDescriptor string) int {
 		length, _ := strconv.Atoi(lengths[j])
 		kh.hashStep(length)
 	}
-	return kh.list[0] * kh.list[1]
+	return int(kh.list[0]) * int(kh.list[1])
 }
 
 func (kh *KnotHash) hashStep(length int) {
@@ -40,17 +42,17 @@ func (kh *KnotHash) hashStep(length int) {
 	kh.skip += 1
 }
 
-func reverseSubSlice(slice []int, start int, length int) []int {
+func reverseSubSlice(slice KnotHashList, start int, length int) KnotHashList {
 	if length <= 1 {
 		return slice
 	}
 
-	var subslice []int
+	var subslice KnotHashList
 
 	if start+length < len(slice) {
 		subslice = slice[start : start+length]
 	} else {
-		subslice = make([]int, length)
+		subslice = make(KnotHashList, length)
 		copy(subslice[0:len(slice)-start], slice[start:])
 		copy(subslice[len(slice)-start:], slice[0:length-(len(slice)-start)])
 	}
@@ -78,7 +80,7 @@ var _ = Describe("Day10", func() {
 				kh := NewKnotHash(5)
 				Expect(kh.position).To(Equal(0))
 				Expect(kh.skip).To(Equal(0))
-				Expect(kh.list).To(Equal([]int{0, 1, 2, 3, 4}))
+				Expect(kh.list).To(Equal(KnotHashList{0, 1, 2, 3, 4}))
 			})
 		})
 
@@ -95,27 +97,27 @@ var _ = Describe("Day10", func() {
 				kh.hashStep(3)
 				Expect(kh.position).To(Equal(3))
 				Expect(kh.skip).To(Equal(1))
-				Expect(kh.list).To(Equal([]int{2, 1, 0, 3, 4}))
+				Expect(kh.list).To(Equal(KnotHashList{2, 1, 0, 3, 4}))
 
 				kh.hashStep(4)
 				Expect(kh.position).To(Equal(3))
 				Expect(kh.skip).To(Equal(2))
-				Expect(kh.list).To(Equal([]int{4, 3, 0, 1, 2}))
+				Expect(kh.list).To(Equal(KnotHashList{4, 3, 0, 1, 2}))
 
 				kh.hashStep(1)
 				Expect(kh.position).To(Equal(1))
 				Expect(kh.skip).To(Equal(3))
-				Expect(kh.list).To(Equal([]int{4, 3, 0, 1, 2}))
+				Expect(kh.list).To(Equal(KnotHashList{4, 3, 0, 1, 2}))
 
 				kh.hashStep(5)
 				Expect(kh.position).To(Equal(4))
 				Expect(kh.skip).To(Equal(4))
-				Expect(kh.list).To(Equal([]int{3, 4, 2, 1, 0}))
+				Expect(kh.list).To(Equal(KnotHashList{3, 4, 2, 1, 0}))
 
 				kh.hashStep(0)
 				Expect(kh.position).To(Equal(3))
 				Expect(kh.skip).To(Equal(5))
-				Expect(kh.list).To(Equal([]int{3, 4, 2, 1, 0}))
+				Expect(kh.list).To(Equal(KnotHashList{3, 4, 2, 1, 0}))
 			})
 		})
 	})
