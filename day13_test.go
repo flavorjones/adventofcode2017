@@ -44,6 +44,7 @@ type Trip struct {
 	packetPos     int
 	scannerStates []*ScannerState
 	severity      int
+	caught        bool
 }
 
 type ScannersDescriptor map[int]int
@@ -74,6 +75,7 @@ func (t *Trip) tick() {
 	}
 	if scanner.position == 0 {
 		t.severity += scanner.srange * t.packetPos
+		t.caught = true
 	}
 }
 
@@ -107,13 +109,32 @@ func NewFirewall(scannersDesc string) *Firewall {
 	return &Firewall{scannersDescriptor: scannersDescriptor}
 }
 
-func (f *Firewall) tripSeverity() int {
+func (f *Firewall) tripSeverity(delay int) (int, bool) {
 	trip := NewTrip(f)
+
+	for j := 0; j < delay; j++ {
+		trip.tock()
+	}
+
 	for trip.packetPos < len(trip.scannerStates)-1 {
 		trip.tick()
 		trip.tock()
 	}
-	return trip.severity
+	return trip.severity, trip.caught
+}
+
+func (f *Firewall) tripSeverityZero() int {
+	delay := 0
+	for {
+		sev, caught := f.tripSeverity(delay)
+		// if delay%1000 == 0 {
+		// 	fmt.Printf("TSZ: del %d sev %d caught %t\n", delay, sev, caught)
+		// }
+		if sev == 0 && !caught {
+			return delay
+		}
+		delay++
+	}
 }
 
 var _ = Describe("Day13", func() {
@@ -133,9 +154,37 @@ var _ = Describe("Day13", func() {
 		})
 
 		Describe("tripSeverity()", func() {
-			It("takes returns the calculated severity of a trip that starts at t=0", func() {
+			It("returns the calculated severity of a trip that starts at t=0", func() {
 				f := NewFirewall(testInput)
-				Expect(f.tripSeverity()).To(Equal(24))
+				sev, _ := f.tripSeverity(0)
+				Expect(sev).To(Equal(24))
+			})
+
+			It("returns the calculated severity of a trip that starts at arbitrary time", func() {
+				f := NewFirewall(testInput)
+				sev, _ := f.tripSeverity(10)
+				Expect(sev).To(Equal(0))
+			})
+
+			It("returns whether the packet was caught", func() {
+				f := NewFirewall(testInput)
+				sev, caught := f.tripSeverity(4)
+				Expect(sev).To(Equal(0))
+				Expect(caught).To(BeTrue())
+			})
+
+			It("returns whether the packet was caught", func() {
+				f := NewFirewall(testInput)
+				sev, caught := f.tripSeverity(10)
+				Expect(sev).To(Equal(0))
+				Expect(caught).To(BeFalse())
+			})
+		})
+
+		Describe("tripSeverityZero()", func() {
+			It("returns the earliest trip in which we're not caught", func() {
+				f := NewFirewall(testInput)
+				Expect(f.tripSeverityZero()).To(Equal(10))
 			})
 		})
 
@@ -215,11 +264,18 @@ var _ = Describe("Day13", func() {
 	})
 
 	Describe("puzzle", func() {
+		rawData, _ := ioutil.ReadFile("day13.txt")
+
 		It("solves star 1", func() {
-			rawData, _ := ioutil.ReadFile("day13.txt")
 			f := NewFirewall(string(rawData))
-			sev := f.tripSeverity()
+			sev, _ := f.tripSeverity(0)
 			fmt.Printf("d13 s1: trip severity is %d\n", sev)
+		})
+
+		It("solves star 2", func() {
+			f := NewFirewall(string(rawData))
+			delay := f.tripSeverityZero()
+			fmt.Printf("d13 s2: delay of %d picoseconds has severity=0\n", delay)
 		})
 	})
 })
