@@ -68,6 +68,35 @@ func (pm *PipeMapper) recursiveCountPidGroup(seen *mapset.Set, process Process) 
 	return count
 }
 
+func (pm *PipeMapper) countGroups() int {
+	remaining := mapset.NewSet()
+	for pid := range pm.processes {
+		remaining.Add(pid)
+	}
+
+	count := 0
+
+	for remaining.Cardinality() > 0 {
+		// pick one, any one
+		remainingIter := remaining.Iterator()
+		pid := (<-remainingIter.C).(string)
+		remainingIter.Stop()
+
+		root := pm.processes[pid]
+		seen := mapset.NewSet()
+
+		pm.recursiveCountPidGroup(&seen, root)
+
+		for pid := range seen.Iter() {
+			remaining.Remove(pid)
+		}
+
+		count++
+	}
+
+	return count
+}
+
 var _ = Describe("Day12", func() {
 	Describe("PipeMapper", func() {
 		testData := heredoc.Doc(`
@@ -123,6 +152,15 @@ var _ = Describe("Day12", func() {
 				Expect(pm.countPidGroup("0")).To(Equal(6))
 			})
 		})
+
+		Describe("countGroups()", func() {
+			It("counts the number of independent groups", func() {
+				pm := NewPipeMapper()
+				pm.parseRecords(testData)
+
+				Expect(pm.countGroups()).To(Equal(2))
+			})
+		})
 	})
 
 	Describe("puzzle", func() {
@@ -134,6 +172,13 @@ var _ = Describe("Day12", func() {
 			pm.parseRecords(cookedData)
 			count := pm.countPidGroup("0")
 			fmt.Printf("d12 s1: there are %d processes\n", count)
+		})
+
+		It("solves star 2", func() {
+			pm := NewPipeMapper()
+			pm.parseRecords(cookedData)
+			count := pm.countGroups()
+			fmt.Printf("d12 s2: there are %d process groups\n", count)
 		})
 	})
 })
