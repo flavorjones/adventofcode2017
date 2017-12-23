@@ -39,6 +39,7 @@ func (c CartesianCoordinatesF) distanceToOrigin() float64 {
 
 type Hextile struct {
 	position CartesianCoordinatesF
+	furthest int
 }
 
 func NewHextile() *Hextile {
@@ -52,6 +53,11 @@ func (h *Hextile) move(direction string) {
 	}
 
 	h.position = h.position.move(translation)
+
+	distance := h.stepsAway()
+	if distance > h.furthest {
+		h.furthest = distance
+	}
 }
 
 func (h *Hextile) moveMany(directionsStr string) {
@@ -90,6 +96,15 @@ var _ = Describe("Day11", func() {
 				Expect(h.position.x).To(BeNumerically("~", LONG_LEG))
 				Expect(h.position.y).To(BeNumerically("~", SHORT_LEG))
 				Expect(h.position.distanceToOrigin()).To(BeNumerically("~", HYPOTENUSE))
+			})
+
+			It("tracks the furthest away from the origin we've been", func() {
+				h := NewHextile()
+				h.move("ne")
+				h.move("ne")
+				h.move("ne")
+				h.move("sw")
+				Expect(h.furthest).To(Equal(3))
 			})
 		})
 
@@ -140,10 +155,11 @@ var _ = Describe("Day11", func() {
 		raw_data, _ := ioutil.ReadFile("day11.txt")
 		walk := string(raw_data)
 
-		It("solves star 1", func() {
+		It("solves stars", func() {
 			h := NewHextile()
 			h.moveMany(walk)
 			fmt.Printf("d11 s1: child is %d steps away\n", h.stepsAway())
+			fmt.Printf("d11 s2: child's furthest move was %d steps away\n", h.furthest)
 		})
 	})
 })
