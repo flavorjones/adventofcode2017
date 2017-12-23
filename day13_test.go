@@ -67,6 +67,18 @@ func NewTrip(f *Firewall) *Trip {
 	return &Trip{packetPos: -1, scannerStates: scannerStates}
 }
 
+func NewTripFromScannerState(scannerStates []*ScannerState) *Trip {
+	copyStates := make([]*ScannerState, len(scannerStates))
+	for j, jstate := range scannerStates {
+		if jstate == nil {
+			continue
+		}
+		copyStates[j] = &ScannerState{srange: jstate.srange, position: jstate.position, direction: jstate.direction}
+	}
+
+	return &Trip{packetPos: -1, scannerStates: copyStates}
+}
+
 func (t *Trip) tick() {
 	t.packetPos += 1
 	scanner := t.scannerStates[t.packetPos]
@@ -124,15 +136,26 @@ func (f *Firewall) tripSeverity(delay int) (int, bool) {
 }
 
 func (f *Firewall) tripSeverityZero() int {
+	pristineTrip := NewTrip(f)
+
 	delay := 0
 	for {
-		sev, caught := f.tripSeverity(delay)
+		trip := NewTripFromScannerState(pristineTrip.scannerStates)
+
+		for trip.packetPos < len(trip.scannerStates)-1 {
+			trip.tick()
+			trip.tock()
+		}
+
 		// if delay%1000 == 0 {
-		// 	fmt.Printf("TSZ: del %d sev %d caught %t\n", delay, sev, caught)
+		// 	pretty.Println("TSZ", delay, trip.caught)
 		// }
-		if sev == 0 && !caught {
+
+		if trip.caught == false {
 			return delay
 		}
+
+		pristineTrip.tock()
 		delay++
 	}
 }
