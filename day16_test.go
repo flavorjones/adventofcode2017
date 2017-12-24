@@ -117,7 +117,7 @@ func (p *ProgramDance) danceN_partner(steps []string, repeat int) {
 	//  move programs into a hash. compile steps to avoid unnecessary
 	//  regexping.
 	//
-	programs := make(map[byte]int) // program → position
+	programs := make([]int, 1000) // program → position
 	for j, program := range p.programs {
 		programs[program] = j
 	}
@@ -136,9 +136,11 @@ func (p *ProgramDance) danceN_partner(steps []string, repeat int) {
 		}
 	}
 
-	for program, position := range programs {
-		p.programs[position] = program
+	np := make([]byte, len(p.programs))
+	for _, program := range p.programs {
+		np[programs[program]] = program
 	}
+	p.programs = np
 }
 
 var _ = Describe("Day16", func() {
@@ -254,7 +256,7 @@ var _ = Describe("Day16", func() {
 		It("solves star 2", func() {
 			p := NewProgramDance(16)
 			//			p.danceN(danceMoves, 1000000000)
-			p.danceN(danceMoves, 100000)
+			p.danceN(danceMoves, 10000000)
 			fmt.Printf("d16 s2: final order is %s\n", p.programs)
 		})
 	})
