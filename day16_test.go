@@ -113,21 +113,22 @@ func (p *ProgramDance) danceN_nonpartner(steps []string, repeat int) {
 }
 
 func (p *ProgramDance) danceN_partner(steps []string, repeat int) {
-	makeByteSlice := func(programs []int) []byte {
+	//
+	//  move programs into a hash. compile steps to avoid unnecessary
+	//  regexping. use a cache to short-circuit when possible.
+	//
+	programs := make([]int, 200) // program → position
+	for j, program := range p.programs {
+		programs[program] = j
+	}
+
+	// func to undo the hashification above
+	programsToByteSlice := func() []byte {
 		np := make([]byte, len(p.programs))
 		for _, program := range p.programs {
 			np[programs[program]] = program
 		}
 		return np
-	}
-
-	//
-	//  move programs into a hash. compile steps to avoid unnecessary
-	//  regexping.
-	//
-	programs := make([]int, 1000) // program → position
-	for j, program := range p.programs {
-		programs[program] = j
 	}
 
 	var compiledSteps [][2]byte
@@ -140,7 +141,7 @@ func (p *ProgramDance) danceN_partner(steps []string, repeat int) {
 
 	cache := make(map[string]string)
 	for j := 0; j < repeat; j++ {
-		cachekey := string(makeByteSlice(programs))
+		cachekey := string(programsToByteSlice())
 
 		danceResults, ok := cache[cachekey]
 		if ok {
@@ -151,11 +152,11 @@ func (p *ProgramDance) danceN_partner(steps []string, repeat int) {
 			for _, chars := range compiledSteps {
 				programs[chars[0]], programs[chars[1]] = programs[chars[1]], programs[chars[0]]
 			}
-			cache[cachekey] = string(makeByteSlice(programs))
+			cache[cachekey] = string(programsToByteSlice())
 		}
 	}
 
-	p.programs = makeByteSlice(programs)
+	p.programs = programsToByteSlice()
 }
 
 var _ = Describe("Day16", func() {
