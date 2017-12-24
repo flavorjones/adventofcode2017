@@ -113,10 +113,31 @@ func (p *ProgramDance) danceN_nonpartner(steps []string, repeat int) {
 }
 
 func (p *ProgramDance) danceN_partner(steps []string, repeat int) {
+	//
+	//  move programs into a hash. compile steps to avoid unnecessary
+	//  regexping.
+	//
+	programs := make(map[byte]int) // program → position
+	for j, program := range p.programs {
+		programs[program] = j
+	}
+
+	var compiledSteps [][2]byte
+	for _, step := range steps {
+		matches := stepPartnerRe.FindStringSubmatch(step)
+		a := matches[1][0]
+		b := matches[2][0]
+		compiledSteps = append(compiledSteps, [2]byte{a, b})
+	}
+
 	for j := 0; j < repeat; j++ {
-		for _, step := range steps {
-			p.step(step)
+		for _, swappers := range compiledSteps {
+			programs[swappers[0]], programs[swappers[1]] = programs[swappers[1]], programs[swappers[0]]
 		}
+	}
+
+	for program, position := range programs {
+		p.programs[position] = program
 	}
 }
 
@@ -209,6 +230,16 @@ var _ = Describe("Day16", func() {
 				p = NewProgramDance(16)
 				p.danceN(danceMoves, 3)
 				Expect(p.programs).To(Equal([]byte("bhdakljmfocgpeni")))
+
+				p = NewProgramDance(16)
+				for j := 0; j < 10; j++ {
+					p.dance(danceMoves)
+				}
+				Expect(p.programs).To(Equal([]byte("jhgpadkcbfmnolei")))
+
+				p = NewProgramDance(16)
+				p.danceN(danceMoves, 10)
+				Expect(p.programs).To(Equal([]byte("jhgpadkcbfmnolei")))
 			})
 		})
 	})
@@ -223,7 +254,7 @@ var _ = Describe("Day16", func() {
 		It("solves star 2", func() {
 			p := NewProgramDance(16)
 			//			p.danceN(danceMoves, 1000000000)
-			p.danceN(danceMoves, 100000000)
+			p.danceN(danceMoves, 100000)
 			fmt.Printf("d16 s2: final order is %s\n", p.programs)
 		})
 	})
