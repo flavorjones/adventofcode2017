@@ -21,6 +21,15 @@ func (ng *NumberGenerator) next() int {
 	return ng.seed
 }
 
+func (ng *NumberGenerator) nextDiv(factor int) int {
+	for {
+		n := ng.next()
+		if n%factor == 0 {
+			return n
+		}
+	}
+}
+
 const low16BitMask = 65535
 
 func sameLow16Bits(a, b int) bool {
@@ -31,6 +40,16 @@ func judgeCount(n1, n2 *NumberGenerator) int {
 	count := 0
 	for j := 0; j < 40000000; j++ {
 		if sameLow16Bits(n1.next(), n2.next()) {
+			count++
+		}
+	}
+	return count
+}
+
+func judgeCount2(n1, n2 *NumberGenerator, f1, f2 int) int {
+	count := 0
+	for j := 0; j < 5000000; j++ {
+		if sameLow16Bits(n1.nextDiv(f1), n2.nextDiv(f2)) {
 			count++
 		}
 	}
@@ -80,6 +99,24 @@ var _ = Describe("Day15", func() {
 				Expect(ng.next()).To(Equal(285222916))
 			})
 		})
+
+		Describe("nextDiv", func() {
+			It("returns the next value that's divisible evenly by the arg", func() {
+				ng := NewNumberGenerator(65, 16807)
+				Expect(ng.nextDiv(4)).To(Equal(1352636452))
+				Expect(ng.nextDiv(4)).To(Equal(1992081072))
+				Expect(ng.nextDiv(4)).To(Equal(530830436))
+				Expect(ng.nextDiv(4)).To(Equal(1980017072))
+				Expect(ng.nextDiv(4)).To(Equal(740335192))
+
+				ng = NewNumberGenerator(8921, 48271)
+				Expect(ng.nextDiv(8)).To(Equal(1233683848))
+				Expect(ng.nextDiv(8)).To(Equal(862516352))
+				Expect(ng.nextDiv(8)).To(Equal(1159784568))
+				Expect(ng.nextDiv(8)).To(Equal(1616057672))
+				Expect(ng.nextDiv(8)).To(Equal(412269392))
+			})
+		})
 	})
 
 	Describe("judgeCount", func() {
@@ -90,12 +127,27 @@ var _ = Describe("Day15", func() {
 		})
 	})
 
+	Describe("judgeCount2", func() {
+		It("finds the number of samelow16bits in the first 40 million numbers", func() {
+			n1 := NewNumberGenerator(65, 16807)
+			n2 := NewNumberGenerator(8921, 48271)
+			Expect(judgeCount2(n1, n2, 4, 8)).To(Equal(309))
+		})
+	})
+
 	Describe("puzzle", func() {
 		It("solves star 1", func() {
 			n1 := NewNumberGenerator(277, 16807)
 			n2 := NewNumberGenerator(349, 48271)
 			count := judgeCount(n1, n2)
-			fmt.Printf("d15 s1: judge counted %d numbers", count)
+			fmt.Printf("d15 s1: judge counted %d numbers\n", count)
+		})
+
+		It("solves star 2", func() {
+			n1 := NewNumberGenerator(277, 16807)
+			n2 := NewNumberGenerator(349, 48271)
+			count := judgeCount2(n1, n2, 4, 8)
+			fmt.Printf("d15 s2: judge counted %d numbers\n", count)
 		})
 	})
 })
