@@ -65,16 +65,65 @@ func (p *ProgramDance) step(step string) {
 	}
 }
 
-func (p *ProgramDance) steps(steps string) {
-	for _, step := range strings.Split(steps, ",") {
-		if len(step) == 0 {
-			continue
+func (p *ProgramDance) dance(dance string) {
+	p.danceN(dance, 1)
+}
+
+func (p *ProgramDance) danceN(dance string, repeat int) {
+	var nonPartnerSteps []string
+	var partnerSteps []string
+
+	for _, step := range strings.Split(dance, ",") {
+		if stepPartnerRe.MatchString(step) {
+			partnerSteps = append(partnerSteps, step)
+		} else {
+			nonPartnerSteps = append(nonPartnerSteps, step)
 		}
+	}
+
+	p.danceN_nonpartner(nonPartnerSteps, repeat)
+
+	p.danceN_partner(partnerSteps, repeat)
+}
+
+func (p *ProgramDance) danceN_nonpartner(steps []string, repeat int) {
+	//
+	//  optimization: do the dance once, and track where programs ended
+	//  up. save those position translations in `moveTo` and replay it
+	//
+	moveTo := make([]int, len(p.programs))
+	save := make([]byte, len(p.programs))
+	copy(save, p.programs)
+
+	for _, step := range steps {
 		p.step(step)
+	}
+
+	for jprogram, program := range save {
+		moveTo[jprogram] = bytes.IndexByte(p.programs, program)
+	}
+
+	for j := 0; j < repeat-1; j++ {
+		swap := make([]byte, len(p.programs))
+		for jprogram, program := range p.programs {
+			swap[moveTo[jprogram]] = program
+		}
+		p.programs = swap
+	}
+}
+
+func (p *ProgramDance) danceN_partner(steps []string, repeat int) {
+	for j := 0; j < repeat; j++ {
+		for _, step := range steps {
+			p.step(step)
+		}
 	}
 }
 
 var _ = Describe("Day16", func() {
+	rawData, _ := ioutil.ReadFile("day16.txt")
+	danceMoves := string(rawData)
+
 	Describe("ProgramDance", func() {
 		Describe("NewProgramDance", func() {
 			It("takes a number of programs and sets up the dance", func() {
@@ -117,15 +166,65 @@ var _ = Describe("Day16", func() {
 				Expect(p.programs).To(Equal([]byte("baedc")))
 			})
 		})
+
+		Describe("dance()", func() {
+			It("performs the steps", func() {
+				p := NewProgramDance(5)
+				p.dance("s1,x3/4,pe/b")
+				Expect(p.programs).To(Equal([]byte("baedc")))
+			})
+
+			It("performs the steps", func() {
+				p := NewProgramDance(16)
+				p.dance(danceMoves)
+				Expect(p.programs).To(Equal([]byte("kpbodeajhlicngmf")))
+			})
+		})
+
+		Describe("danceN()", func() {
+			It("performs the steps multiple times", func() {
+				p := NewProgramDance(5)
+				p.danceN("s1,x3/4,pe/b", 2)
+				Expect(p.programs).To(Equal([]byte("ceadb")))
+			})
+		})
+
+		Describe("equivalence", func() {
+			It("dance x N and danceN should be equivalent", func() {
+				p := NewProgramDance(16)
+				p.dance(danceMoves)
+				p.dance(danceMoves)
+				Expect(p.programs).To(Equal([]byte("dkfcagielbnjohpm")))
+
+				p = NewProgramDance(16)
+				p.danceN(danceMoves, 2)
+				Expect(p.programs).To(Equal([]byte("dkfcagielbnjohpm")))
+
+				p = NewProgramDance(16)
+				p.dance(danceMoves)
+				p.dance(danceMoves)
+				p.dance(danceMoves)
+				Expect(p.programs).To(Equal([]byte("bhdakljmfocgpeni")))
+
+				p = NewProgramDance(16)
+				p.danceN(danceMoves, 3)
+				Expect(p.programs).To(Equal([]byte("bhdakljmfocgpeni")))
+			})
+		})
 	})
 
 	Describe("puzzle", func() {
-		rawData, _ := ioutil.ReadFile("day16.txt")
-
 		It("solves star 1", func() {
 			p := NewProgramDance(16)
-			p.steps(string(rawData))
+			p.dance(danceMoves)
 			fmt.Printf("d16 s1: final order is %s\n", p.programs)
+		})
+
+		It("solves star 2", func() {
+			p := NewProgramDance(16)
+			//			p.danceN(danceMoves, 1000000000)
+			p.danceN(danceMoves, 100000000)
+			fmt.Printf("d16 s2: final order is %s\n", p.programs)
 		})
 	})
 })
