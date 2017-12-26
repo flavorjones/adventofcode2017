@@ -41,7 +41,7 @@ func (s *SpinLock) insert() {
 func (s *SpinLock) insertN(n int) {
 	for j := 1; j <= n; j++ {
 		if (j % 100000) == 0 {
-			fmt.Printf("insert %d", j)
+			fmt.Printf("→ insert %d\n", j)
 		}
 		s.insert()
 	}
@@ -152,12 +152,11 @@ var _ = Describe("Day17", func() {
 			fmt.Printf("d17 s1: short-circuit spinlock with %d\n", answer)
 		})
 
-		// It("solves star 2", func() {
-		// 	s := NewSpinLock(312)
-		// 	s.insertN(50000000)
-		// 	index := s.indexOf(0)
-		// 	answer := s.buffer[index+1]
-		// 	fmt.Printf("d17 s2: short-circuit spinlock with %d\n", answer)
-		// })
+		It("solves star 2", func() {
+			s := NewSpinLock(312)
+			s.insertN(50000000)
+			answer := s.cursorOf(0).Next().Value
+			fmt.Printf("d17 s2: short-circuit spinlock with %d\n", answer)
+		})
 	})
 })
