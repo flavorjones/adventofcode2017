@@ -7,23 +7,32 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MakeNowJust/heredoc"
+	"github.com/kr/pretty"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-type SoundCard struct {
+type DuetCpu struct {
+	id        int
 	registers map[byte]int
 	pc        int
-	sound     int
-	recovered int
+	incoming  chan int
+	outgoing  chan int
+	sentCount int
 }
 
-func NewSoundCard() *SoundCard {
-	return &SoundCard{registers: make(map[byte]int)}
+func NewDuetCpu(id int) *DuetCpu {
+	d := DuetCpu{registers: make(map[byte]int), incoming: make(chan int, 100)}
+	d.id = id
+	d.registers['p'] = d.id
+	return &d
 }
 
-func (s *SoundCard) getRegister(name byte) int {
+func (s *DuetCpu) setOutgoing(outgoing chan int) {
+	s.outgoing = outgoing
+}
+
+func (s *DuetCpu) getRegister(name byte) int {
 	val, ok := s.registers[name]
 	if ok {
 		return val
@@ -32,7 +41,7 @@ func (s *SoundCard) getRegister(name byte) int {
 	return 0
 }
 
-func (s *SoundCard) valueOf(thing string) int {
+func (s *DuetCpu) valueOf(thing string) int {
 	if val, err := strconv.Atoi(thing); err == nil {
 		return val
 	} else {
@@ -40,30 +49,30 @@ func (s *SoundCard) valueOf(thing string) int {
 	}
 }
 
-var oneArgSoundCardInstructionRe = regexp.MustCompile(`(snd|rcv) (-?\w+)`)
-var twoArgSoundCardInstructionRe = regexp.MustCompile(`(set|add|mul|mod|jgz) (-?\w+) (-?\w+)`)
+var oneArgDuetCpuInstructionRe = regexp.MustCompile(`(snd|rcv) (-?\w+)`)
+var twoArgDuetCpuInstructionRe = regexp.MustCompile(`(set|add|mul|mod|jgz) (-?\w+) (-?\w+)`)
 
-func (s *SoundCard) execInstruction(instruction string) {
+func (s *DuetCpu) execInstruction(instruction string) {
 	switch {
-	case oneArgSoundCardInstructionRe.MatchString(instruction):
-		match := oneArgSoundCardInstructionRe.FindStringSubmatch(instruction)
-		srcValue := s.valueOf(match[2])
+	case oneArgDuetCpuInstructionRe.MatchString(instruction):
+		match := oneArgDuetCpuInstructionRe.FindStringSubmatch(instruction)
 
 		switch match[1] {
 		case "snd":
-			s.sound = srcValue
+			srcValue := s.valueOf(match[2])
+			s.outgoing <- srcValue
+			s.sentCount++
 			s.pc++
 		case "rcv":
-			if srcValue != 0 {
-				s.recovered = s.sound
-			}
+			tgtName := match[2][0]
+			s.registers[tgtName] = <-s.incoming
 			s.pc++
 		default:
 			panic(fmt.Sprintf("error: could not execute instruction `%s`", match[1]))
 		}
 
-	case twoArgSoundCardInstructionRe.MatchString(instruction):
-		match := twoArgSoundCardInstructionRe.FindStringSubmatch(instruction)
+	case twoArgDuetCpuInstructionRe.MatchString(instruction):
+		match := twoArgDuetCpuInstructionRe.FindStringSubmatch(instruction)
 		tgtName := match[2][0]
 		srcValue := s.valueOf(match[3])
 
@@ -92,22 +101,23 @@ func (s *SoundCard) execInstruction(instruction string) {
 	}
 }
 
-func (s *SoundCard) execInstructions(rawInstructions string) {
+func (s *DuetCpu) execInstructions(rawInstructions string) {
 	instructions := strings.Split(rawInstructions, "\n")
 	for s.pc < len(instructions) {
+		pretty.Printf("cpu %d: pc %d sc %d `%s`\n", s.id, s.pc, s.sentCount, instructions[s.pc])
 		s.execInstruction(instructions[s.pc])
-		if s.recovered != 0 {
-			break
-		}
 	}
 }
 
 var _ = Describe("Day18", func() {
-	Describe("SoundCard", func() {
-		var s *SoundCard
+	Describe("DuetCpu", func() {
+		var s *DuetCpu
+		var c chan int
 
 		BeforeEach(func() {
-			s = NewSoundCard()
+			s = NewDuetCpu(0)
+			c = make(chan int, 100)
+			s.setOutgoing(c)
 		})
 
 		Describe("execInstruction", func() {
@@ -123,6 +133,8 @@ var _ = Describe("Day18", func() {
 				Expect(s.pc).To(Equal(4))
 				s.execInstruction("snd a")
 				Expect(s.pc).To(Equal(5))
+				_ = <-c
+				s.incoming <- 3
 				s.execInstruction("rcv a")
 				Expect(s.pc).To(Equal(6))
 			})
@@ -185,38 +197,35 @@ var _ = Describe("Day18", func() {
 				})
 			})
 
-			Describe("snd/rcv", func() {
-				It("should save the sound played when a literal, and recover it", func() {
-					s.execInstruction("snd 440")
-					s.execInstruction("rcv 1")
-					Expect(s.recovered).To(Equal(440))
+			Describe("snd", func() {
+				It("sends a literal value on a channel", func() {
+					s.execInstruction("snd 11")
+					result := <-c
+					Expect(result).To(Equal(11))
 				})
 
-				It("should save the sound played from a register", func() {
-					s.execInstruction("set a 435")
+				It("sends a register value on a channel", func() {
+					s.execInstruction("set a 12")
 					s.execInstruction("snd a")
-					s.execInstruction("rcv -1")
-					Expect(s.recovered).To(Equal(435))
+					result := <-c
+					Expect(result).To(Equal(12))
 				})
 
-				It("should recover based on a register", func() {
-					s.execInstruction("set a 435")
-					s.execInstruction("set b 2")
-					s.execInstruction("snd a")
-					s.execInstruction("rcv b")
-					Expect(s.recovered).To(Equal(435))
+				It("increments a sent counter", func() {
+					s.execInstruction("set a 1")
+					s.execInstruction("snd 11")
+					_ = <-c
+					s.execInstruction("snd 12")
+					_ = <-c
+					Expect(s.sentCount).To(Equal(2))
 				})
+			})
 
-				It("should not recover when rcv arg is zero literal", func() {
-					s.execInstruction("snd 440")
-					s.execInstruction("rcv 0")
-					Expect(s.recovered).To(Equal(0))
-				})
-
-				It("should not recover when rcv arg is zero from register", func() {
-					s.execInstruction("snd 440")
-					s.execInstruction("rcv b")
-					Expect(s.recovered).To(Equal(0))
+			Describe("rcv", func() {
+				It("write the received value to a register", func() {
+					s.incoming <- 33
+					s.execInstruction("rcv a")
+					Expect(s.getRegister('a')).To(Equal(33))
 				})
 			})
 
@@ -246,33 +255,47 @@ var _ = Describe("Day18", func() {
 		})
 
 		Describe("execInstructions", func() {
-			It("runs a bunch of instructions, paying attention to pc", func() {
-				instructions := heredoc.Doc(`
-					set a 1
-					add a 2
-					mul a a
-					mod a 5
-					snd a
-					set a 0
-					rcv a
-					jgz a -1
-					set a 1
-					jgz a -2
-				`)
-				s.execInstructions(instructions)
-				Expect(s.recovered).To(Equal(4))
-			})
+			// It("runs a bunch of instructions, paying attention to pc", func() {
+			// 	instructions := heredoc.Doc(`
+			// 		set a 1
+			// 		add a 2
+			// 		mul a a
+			// 		mod a 5
+			// 		snd a
+			// 		set a 0
+			// 		rcv a
+			// 		jgz a -1
+			// 		set a 1
+			// 		jgz a -2
+			// 	`)
+			// 	s.execInstructions(instructions)
+			//  Expect(s.recovered).To(Equal(4))
+			// })
 		})
 	})
 
 	Describe("puzzle", func() {
 		rawData, _ := ioutil.ReadFile("day18.txt")
+		instructions := string(rawData)
 
-		It("solves star 1", func() {
-			s := NewSoundCard()
-			s.execInstructions(string(rawData))
-			answer := s.recovered
-			fmt.Printf("d18 s1: recovered %d\n", answer)
+		// It("solves star 1", func() {
+		// 	s := NewDuetCpu()
+		// 	s.execInstructions(string(rawData))
+		// 	answer := s.recovered
+		// 	fmt.Printf("d18 s1: recovered %d\n", answer)
+		// })
+
+		It("solves star 2", func() {
+			// note that this eventually deadlocks, so we need to print the
+			// sentCount out to determine the answer. ugh.
+			s0 := NewDuetCpu(0)
+			s1 := NewDuetCpu(1)
+			s0.setOutgoing(s1.incoming)
+			s1.setOutgoing(s0.incoming)
+
+			go s0.execInstructions(instructions)
+			s1.execInstructions(instructions)
+			fmt.Printf("d18 s2: cpu 1 sent a value %d times\n", s1.sentCount)
 		})
 	})
 })
