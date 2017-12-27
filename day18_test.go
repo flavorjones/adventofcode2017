@@ -3,11 +3,12 @@ package adventofcode2017_test
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/kr/pretty"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -65,8 +66,12 @@ func (s *DuetCpu) execInstruction(instruction string) {
 			s.pc++
 		case "rcv":
 			tgtName := match[2][0]
-			s.registers[tgtName] = <-s.incoming
-			s.pc++
+			select {
+			case s.registers[tgtName] = <-s.incoming:
+				s.pc++
+			case <-time.After(time.Second):
+				s.pc = math.MaxInt32 // should terminate program
+			}
 		default:
 			panic(fmt.Sprintf("error: could not execute instruction `%s`", match[1]))
 		}
@@ -104,7 +109,6 @@ func (s *DuetCpu) execInstruction(instruction string) {
 func (s *DuetCpu) execInstructions(rawInstructions string) {
 	instructions := strings.Split(rawInstructions, "\n")
 	for s.pc < len(instructions) {
-		pretty.Printf("cpu %d: pc %d sc %d `%s`\n", s.id, s.pc, s.sentCount, instructions[s.pc])
 		s.execInstruction(instructions[s.pc])
 	}
 }
@@ -227,6 +231,10 @@ var _ = Describe("Day18", func() {
 					s.execInstruction("rcv a")
 					Expect(s.getRegister('a')).To(Equal(33))
 				})
+
+				It("times out", func() {
+					s.execInstruction("rcv b")
+				})
 			})
 
 			Describe("jgz", func() {
@@ -286,8 +294,6 @@ var _ = Describe("Day18", func() {
 		// })
 
 		It("solves star 2", func() {
-			// note that this eventually deadlocks, so we need to print the
-			// sentCount out to determine the answer. ugh.
 			s0 := NewDuetCpu(0)
 			s1 := NewDuetCpu(1)
 			s0.setOutgoing(s1.incoming)
