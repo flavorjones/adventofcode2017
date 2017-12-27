@@ -48,6 +48,7 @@ type RoutingTable struct {
 	direction CartesianCoordinates
 	table     [][]byte
 	letters   []byte
+	stepCount int
 }
 
 func NewRoutingTable(table string) *RoutingTable {
@@ -79,10 +80,12 @@ func (r *RoutingTable) sendPacket() {
 		switch {
 		case route == '|' || route == '-':
 			r.position = r.position.move(r.direction)
+			r.stepCount++
 
 		case isAlpha(route):
 			r.letters = append(r.letters, route)
 			r.position = r.position.move(r.direction)
+			r.stepCount++
 
 		case route == '+':
 			moved := false
@@ -102,6 +105,7 @@ func (r *RoutingTable) sendPacket() {
 			if !moved {
 				panic(pretty.Sprintf("error: could not discern move at '%c' with direction %v", route, r.direction))
 			}
+			r.stepCount++
 
 		case route == ' ':
 			return
@@ -128,6 +132,7 @@ var _ = Describe("Day19", func() {
 			r := NewRoutingTable(table)
 			r.sendPacket()
 			Expect(string(r.letters)).To(Equal("ABCDEF"))
+			Expect(r.stepCount).To(Equal(38))
 		})
 	})
 
@@ -135,10 +140,11 @@ var _ = Describe("Day19", func() {
 		rawData, _ := ioutil.ReadFile("day19.txt")
 		table := string(rawData)
 
-		It("solves star 1", func() {
+		It("solves stars", func() {
 			r := NewRoutingTable(table)
 			r.sendPacket()
 			fmt.Printf("d19 s1: letters encountered are `%s`\n", string(r.letters))
+			fmt.Printf("d19 s2: took %d steps\n", r.stepCount)
 		})
 	})
 })
