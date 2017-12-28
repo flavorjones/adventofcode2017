@@ -1,11 +1,11 @@
 package adventofcode2017_test
 
 import (
-	"fmt"
 	"math"
 	"regexp"
 	"strconv"
 
+	"github.com/kr/pretty"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -35,18 +35,27 @@ func NewParticleSet() *ParticleSet {
 	return &ParticleSet{}
 }
 
+var positionRe = regexp.MustCompile(`.*p=< ?(-?\w+), ?(-?\w+), ?(-?\w+)>`)
+var velocityRe = regexp.MustCompile(`.*v=< ?(-?\w+), ?(-?\w+), ?(-?\w+)>`)
 var accelerationRe = regexp.MustCompile(`.*a=< ?(-?\w+), ?(-?\w+), ?(-?\w+)>`)
 
 func (p *ParticleSet) addParticle(pdesc string) {
-	match := accelerationRe.FindStringSubmatch(pdesc)
-	if match == nil {
-		panic(fmt.Sprintf("error: could not parse `%s`", pdesc))
+	coordinatesFor := func(re *regexp.Regexp) Cartesian3Coordinates {
+		match := re.FindStringSubmatch(pdesc)
+		if match == nil {
+			panic(pretty.Sprintf("error: could not parse `%s` with %v", pdesc, re))
+		}
+		x, _ := strconv.Atoi(match[1])
+		y, _ := strconv.Atoi(match[2])
+		z, _ := strconv.Atoi(match[3])
+		return Cartesian3Coordinates{x, y, z}
 	}
-	x, _ := strconv.Atoi(match[1])
-	y, _ := strconv.Atoi(match[2])
-	z, _ := strconv.Atoi(match[3])
-	c3 := Cartesian3Coordinates{x, y, z}
-	particle := ParticleState{acceleration: c3}
+
+	particle := ParticleState{
+		position:     coordinatesFor(positionRe),
+		velocity:     coordinatesFor(velocityRe),
+		acceleration: coordinatesFor(accelerationRe),
+	}
 	p.particles = append(p.particles, particle)
 }
 
@@ -59,11 +68,25 @@ var _ = Describe("Day20", func() {
 	})
 
 	Describe("ParticleSet", func() {
-		It("parses acceleration", func() {
-			p := NewParticleSet()
+		var p *ParticleSet
+
+		BeforeEach(func() {
+			p = NewParticleSet()
 			p.addParticle("p=< 3,0,0>, v=< 2,0,0>, a=<-1,0,0>")
 			p.addParticle("p=< 4,0,0>, v=< 0,0,0>, a=<-2,0,0>")
+		})
 
+		It("parses position", func() {
+			Expect(p.particles[0].position).To(Equal(Cartesian3Coordinates{3, 0, 0}))
+			Expect(p.particles[1].position).To(Equal(Cartesian3Coordinates{4, 0, 0}))
+		})
+
+		It("parses velocity", func() {
+			Expect(p.particles[0].velocity).To(Equal(Cartesian3Coordinates{2, 0, 0}))
+			Expect(p.particles[1].velocity).To(Equal(Cartesian3Coordinates{0, 0, 0}))
+		})
+
+		It("parses acceleration", func() {
 			Expect(p.particles[0].acceleration).To(Equal(Cartesian3Coordinates{-1, 0, 0}))
 			Expect(p.particles[1].acceleration).To(Equal(Cartesian3Coordinates{-2, 0, 0}))
 		})
