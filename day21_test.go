@@ -325,5 +325,14 @@ var _ = Describe("Day21", func() {
 			count := fa.PixelCount()
 			fmt.Printf("d21 s1: after 5 iterations there are %d pixels on\n", count)
 		})
+
+		It("solves star 2", func() {
+			fa := NewFractalArt(rules)
+			for j := 1; j <= 18; j++ {
+				fa.ZoomAndEnhance()
+			}
+			count := fa.PixelCount()
+			fmt.Printf("d21 s2: after 18 iterations there are %d pixels on\n", count)
+		})
 	})
 })
