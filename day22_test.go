@@ -83,6 +83,27 @@ func (sv *SporificaVirus) Burst() {
 	sv.position = sv.position.move(sv.direction)
 }
 
+func (sv *SporificaVirus) Burst2() {
+	var nextStatus InfectionStatus
+	switch sv.NodeInfected(sv.position) {
+	case InfectionStatusClean:
+		nextStatus = InfectionStatusWeakened
+		sv.direction = virusTurnLeft[sv.direction]
+	case InfectionStatusWeakened:
+		nextStatus = InfectionStatusInfected
+		sv.infections++
+	case InfectionStatusInfected:
+		nextStatus = InfectionStatusFlagged
+		sv.direction = virusTurnRight[sv.direction]
+	case InfectionStatusFlagged:
+		nextStatus = InfectionStatusClean
+		sv.direction = CartesianCoordinates{-sv.direction.x, -sv.direction.y}
+	}
+
+	sv.infected[sv.position] = nextStatus
+	sv.position = sv.position.move(sv.direction)
+}
+
 var _ = Describe("Day22", func() {
 	Describe("SporificaVirus", func() {
 		var testMap = heredoc.Doc(`
@@ -165,6 +186,71 @@ var _ = Describe("Day22", func() {
 				Expect(sv.infections).To(Equal(5587))
 			})
 		})
+
+		Describe("Burst2", func() {
+			It("ad-hoc", func() {
+				var position CartesianCoordinates
+				sv := NewSporificaVirus(testMap)
+
+				// context: clean node
+				position = sv.position
+				sv.Burst2()
+				Expect(sv.NodeInfected(position)).To(Equal(InfectionStatusWeakened))
+				Expect(sv.position).To(Equal(CartesianCoordinates{-1, 0}))
+
+				// context: infected node
+				position = sv.position
+				sv.Burst2()
+				Expect(sv.NodeInfected(position)).To(Equal(InfectionStatusFlagged))
+				Expect(sv.position).To(Equal(CartesianCoordinates{-1, 1}))
+
+				// context: clean node
+				position = sv.position
+				sv.Burst2()
+				Expect(sv.NodeInfected(position)).To(Equal(InfectionStatusWeakened))
+				Expect(sv.position).To(Equal(CartesianCoordinates{-2, 1}))
+
+				// context: clean node
+				position = sv.position
+				sv.Burst2()
+				Expect(sv.NodeInfected(position)).To(Equal(InfectionStatusWeakened))
+				Expect(sv.position).To(Equal(CartesianCoordinates{-2, 0}))
+
+				// context: clean node
+				position = sv.position
+				sv.Burst2()
+				Expect(sv.NodeInfected(position)).To(Equal(InfectionStatusWeakened))
+				Expect(sv.position).To(Equal(CartesianCoordinates{-1, 0}))
+
+				// context: flagged node
+				position = sv.position
+				sv.Burst2()
+				Expect(sv.NodeInfected(position)).To(Equal(InfectionStatusClean))
+				Expect(sv.position).To(Equal(CartesianCoordinates{-2, 0}))
+
+				// context: weakened node
+				position = sv.position
+				sv.Burst2()
+				Expect(sv.NodeInfected(position)).To(Equal(InfectionStatusInfected))
+				Expect(sv.position).To(Equal(CartesianCoordinates{-3, 0}))
+			})
+
+			It("ad-hoc", func() {
+				sv := NewSporificaVirus(testMap)
+				for j := 1; j <= 100; j++ {
+					sv.Burst2()
+				}
+				Expect(sv.infections).To(Equal(26))
+			})
+
+			It("ad-hoc", func() {
+				sv := NewSporificaVirus(testMap)
+				for j := 1; j <= 10000000; j++ {
+					sv.Burst2()
+				}
+				Expect(sv.infections).To(Equal(2511944))
+			})
+		})
 	})
 
 	Describe("puzzle", func() {
@@ -179,6 +265,16 @@ var _ = Describe("Day22", func() {
 				sv.Burst()
 			}
 			fmt.Printf("d22 s1: there were %d infections\n", sv.infections)
+		})
+
+		It("solves star 2", func() {
+			sv := NewSporificaVirus(nodeMap)
+			Expect(sv.NodeInfected(CartesianCoordinates{-12, 12})).To(Equal(InfectionStatusInfected))
+
+			for j := 1; j <= 10000000; j++ {
+				sv.Burst2()
+			}
+			fmt.Printf("d22 s2: there were %d infections\n", sv.infections)
 		})
 	})
 })
