@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,6 +21,7 @@ type DuetCpu struct {
 	incoming  chan int
 	outgoing  chan int
 	sentCount int
+	mulCount  int
 }
 
 func NewDuetCpu(id int) *DuetCpu {
@@ -51,7 +53,7 @@ func (s *DuetCpu) valueOf(thing string) int {
 }
 
 var oneArgDuetCpuInstructionRe = regexp.MustCompile(`(snd|rcv) (-?\w+)`)
-var twoArgDuetCpuInstructionRe = regexp.MustCompile(`(set|add|mul|mod|jgz) (-?\w+) (-?\w+)`)
+var twoArgDuetCpuInstructionRe = regexp.MustCompile(`(set|add|sub|mul|mod|jgz|jnz) (-?\w+) (-?\w+)`)
 
 func (s *DuetCpu) execInstruction(instruction string) {
 	switch {
@@ -88,14 +90,24 @@ func (s *DuetCpu) execInstruction(instruction string) {
 		case "add":
 			s.registers[tgtName] = s.getRegister(tgtName) + srcValue
 			s.pc++
+		case "sub":
+			s.registers[tgtName] = s.getRegister(tgtName) - srcValue
+			s.pc++
 		case "mul":
 			s.registers[tgtName] = s.getRegister(tgtName) * srcValue
 			s.pc++
+			s.mulCount++
 		case "mod":
 			s.registers[tgtName] = s.getRegister(tgtName) % srcValue
 			s.pc++
 		case "jgz":
 			if s.valueOf(match[2]) > 0 {
+				s.pc += srcValue
+			} else {
+				s.pc++
+			}
+		case "jnz":
+			if s.valueOf(match[2]) != 0 {
 				s.pc += srcValue
 			} else {
 				s.pc++
@@ -108,7 +120,11 @@ func (s *DuetCpu) execInstruction(instruction string) {
 
 func (s *DuetCpu) execInstructions(rawInstructions string) {
 	instructions := strings.Split(rawInstructions, "\n")
-	for s.pc < len(instructions) {
+	instructionLen := len(instructions)
+	if len(instructions[instructionLen-1]) == 0 {
+		instructionLen -= 1
+	}
+	for s.pc < instructionLen {
 		s.execInstruction(instructions[s.pc])
 	}
 }
@@ -168,6 +184,21 @@ var _ = Describe("Day18", func() {
 					s.execInstruction("set b 9")
 					s.execInstruction("add a b")
 					Expect(s.getRegister('a')).To(Equal(13))
+				})
+			})
+
+			Describe("sub", func() {
+				It("should subtract a value from a register", func() {
+					s.execInstruction("set a 3")
+					s.execInstruction("sub a -5")
+					Expect(s.getRegister('a')).To(Equal(8))
+				})
+
+				It("should subtract a register value from a register", func() {
+					s.execInstruction("set a 4")
+					s.execInstruction("set b 9")
+					s.execInstruction("sub a b")
+					Expect(s.getRegister('a')).To(Equal(-5))
 				})
 			})
 
@@ -260,6 +291,30 @@ var _ = Describe("Day18", func() {
 					Expect(s.pc).To(Equal(2))
 				})
 			})
+
+			Describe("jnz", func() {
+				It("sets program counter forward based on literal", func() {
+					s.execInstruction("jnz 1 10")
+					Expect(s.pc).To(Equal(10))
+				})
+
+				It("sets program counter backwards based on register", func() {
+					s.execInstruction("set a 1")
+					s.execInstruction("jnz a -10")
+					Expect(s.pc).To(Equal(-9))
+				})
+
+				It("increments pc if literal arg is zero", func() {
+					s.execInstruction("jnz 0 10")
+					Expect(s.pc).To(Equal(1))
+				})
+
+				It("sets program counter if register arg is less than zero", func() {
+					s.execInstruction("set a -1")
+					s.execInstruction("jnz a 10")
+					Expect(s.pc).To(Equal(11))
+				})
+			})
 		})
 
 		Describe("execInstructions", func() {
@@ -302,6 +357,33 @@ var _ = Describe("Day18", func() {
 			go s0.execInstructions(instructions)
 			s1.execInstructions(instructions)
 			fmt.Printf("d18 s2: cpu 1 sent a value %d times\n", s1.sentCount)
+		})
+	})
+})
+
+var _ = Describe("Day23", func() {
+	It("counts how many times `mul` is invoked", func() {
+		instructions := heredoc.Doc(`
+			set a 1
+			add a 2
+			mul a a
+			mod a 5
+			set a 0
+			set a 1
+		`)
+		s := NewDuetCpu(0)
+		s.execInstructions(instructions)
+		Expect(s.mulCount).To(Equal(1))
+	})
+
+	Describe("puzzle", func() {
+		rawData, _ := ioutil.ReadFile("day23.txt")
+		instructions := string(rawData)
+
+		It("solves star 1", func() {
+			s := NewDuetCpu(0)
+			s.execInstructions(instructions)
+			fmt.Printf("d23 s1: mul was called %d times\n", s.mulCount)
 		})
 	})
 })
