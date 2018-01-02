@@ -13,6 +13,10 @@ class Bridge
     @strength ||= components.inject(0) { |sum, component| sum += component.strength }
   end
 
+  def length
+    components.length
+  end
+
   def inspect
     "[" + components.map(&:inspect).join(", ") + "]\n"
   end
@@ -75,6 +79,10 @@ class BridgeBuilder
   def strongest starting_plug
     bridges(starting_plug).max_by { |b| b.strength }
   end
+
+  def longest starting_plug
+    bridges(starting_plug).max_by { |b| b.length * 1000000 + b.strength }
+  end
 end
 
 describe "BridgeBuilder" do
@@ -106,11 +114,23 @@ describe "BridgeBuilder" do
     end
   end
 
+  describe "#longest" do
+    it "finds the longest bridge, choosing strongest in case of tie" do
+      expect(BridgeBuilder.new(components).longest(0).strength).to eq(19)
+    end
+  end
+
   describe "puzzle" do
     it "solves star 1" do
       bb = BridgeBuilder.new(BridgeComponent.builder(File.read("day24.txt")))
       strongest = bb.strongest(0)
       puts "d24 s1: strongest bridge has strength #{strongest.strength}"
+    end
+
+    it "solves star 2" do
+      bb = BridgeBuilder.new(BridgeComponent.builder(File.read("day24.txt")))
+      longest = bb.longest(0)
+      puts "d24 s2: longest bridge has strength #{longest.strength}"
     end
   end
 end
